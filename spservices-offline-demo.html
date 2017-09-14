@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8" />
+<title>SPServices Offline Demo</title>
+
+<style>
+html, body {
+	color: #333;
+}
+
+#usernameNotice, #currentSiteNotice {
+	padding: 10px;
+}
+
+#usernameNotice, .warning {
+	background-color: pink;
+}
+
+#currentSiteNotice {
+	background-color: cyan;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	text-align: center;
+}
+
+.container {
+	padding: 0 50px 50px;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+th, td {
+	padding: 6px;
+	border: 1px solid #333;
+}
+
+th {
+	background: green;
+	color: white;
+}
+
+tbody tr td:first-of-type {
+	font-weight: bold;
+	text-align: center;
+}
+
+tbody tr:nth-of-type(2n) td {
+	background: #ccb;
+}
+
+#exerciseList li {
+	margin: 10px;
+}
+
+pre {
+	background: #eee;
+	padding: 4px;
+	overflow-x: scroll;
+}
+</style>
+</head>
+<body>
+	<div class="container">
+		<div id="usernameNotice">
+		</div>
+		<div id="currentSiteNotice">
+		</div>
+		<header>
+			<h1>SPServices Offline</h1>
+			<h2>A learning/training tool for SPServices</h2>
+		</header>
+		<p>
+			SPServices is a popular jQuery plugin used for performing web services operations in SharePoint. The purpose of SPServices Offline is to give web developers with little or no SharePoint development experience an opportunity to practice basic SPServices CRUD operations without SharePoint access, or even internet access. You can use this library to build offline web applications that are essentially mockups of real applications, with very basic working functionality. This will give you a platform to show your experience with SPServices, and with integrating ajax-style CRUD operations with functional web apps.
+		</p>
+		<p>
+			Once you have gained some familiarity and experience with this library, I would suggest building some of your own small projects or mock applications using it. If you are still learning, then I have listed some basic exercises below to help you get used to the library. Once the basic mock SharePoint components have been set up (default web URL, default user name, lists in your mock site) then you should do the practice problems in the <b>Exercises</b> section below using standard SPServices syntax, as you would find in other tutorials.
+		</p>
+		<h3>Setup</h3>
+			<p>
+				Create a basic html page, and be sure to call in the scripts for jQuery and SPServicesOffline:
+<code>				
+<pre>
+	&lt;script src="jquery.js"&gt;&lt;/script&gt;
+	&lt;script src="jquery.spservices-offline.js"&gt;&lt;/script&gt;
+</pre>
+</code>
+			</p>
+			<p>
+				Now you can either write your practice code in any script that follows these lines, and run the page in your browser to test. Or for realtime interaction, you can open the page and open the browser's JavaScript console, and enter your code directly into the console.
+			</p>
+			<p>
+				Here are a few utility methods we have added to help you maintain the configuration of your mock site. Note that, as with SPServices, this is built onto the jQuery prototype, and you can use $() to create a simple jQuery object that can invoke the code.
+<code>				
+<pre>
+// This line will reset the username you are using for the practice lessons.
+$().SPServicesOffline.SPSetCurrentUser(yourUserName);
+
+/**
+ * Note: if you attempt to use the real code $().SPServices.SPGetCurrentUser() before a username
+ * has been established, then the method above will be called automatically to ask you to create one.
+ */
+	
+// This line will reset the subsite URL you are using for the practice lessons.
+$().SPServicesOffline.SPSetCurrentSite(yourSiteURL);
+</pre>
+</code>
+			</p>
+			<p>
+				We have created some custom operations in SPServicesOffline to create the "mock" sites, lists, and list data you will work with. Note that these are specific to SPServicesOffline (there are no equivalents in the real SPServices), and are only used for testing/practice. Here is an example of how to create a basic list.
+
+<code>				
+<pre>
+$().SPServicesOffline.SPAddList({
+  webURL: $().SPServices.SPGetCurrentSite(), // You can use this, or enter the url directly
+  listName: "MyFirstList",
+  description: "A basic test list"
+});
+</pre>
+</code>
+
+				You can then add columns to the list like so:
+
+<code>
+<pre>
+$().SPServicesOffline.SPAddColumns({
+  webURL: $().SPServices.SPGetCurrentSite(),
+  listName: "MyFirstList",
+  
+  // Pass in an object called `columns` whose keys are the column titles, and values are the column types
+  columns: {
+    "BookToRead": "Single line of text",
+    "PagesRemaining": "Number",
+    "Due Date": "Date and Time"
+  };
+});
+</pre>
+</code>
+
+  For reference, the available column types in SPServicesOffline are:
+	<ul>
+		<li>"Number"</li>
+		<li>"Single line of text"</li>
+		<li>"Multiple lines of text"</li>
+		<li>"Date and Time"</li>
+		<li>"Person or Group"</li>
+		<li>"Checkbox"</li>
+	</ul>
+
+    For a "Choice" type column, instead of pointing to a string, point to an array of the choices.
+    We assume the first choice is the default, so if you want no default put nothing for the first entry:
+
+<code>
+<pre>
+columns: {
+    "ItemCode": "Number",
+    "Country": [ , "USA", "Brazil", "Madagascar"] // No default
+    "Status": ["Pending", "Purchased", "Shipped"] // Default is "Pending"
+}
+</pre>
+</code>
+
+When you get bored with a mock list you have created... you can delete it from existence:
+
+<code>
+<pre>
+$().SPServicesOffline.SPDeleteList({
+	webURL: $().SPServices.SPGetCurrentSite(),
+	listName: "MyFirstList"
+});
+</pre>
+</code>
+
+	Now to the point: learning SPServices. If you have created the "MyFirstList" list as above (and haven't deleted it), you can now add line items to the list using standard SPServices processes.
+
+<code>
+<pre>
+var dueDate = new Date(2020, 0, 15, 12, 0, 0), // January 15, 2020, at noon
+	dueDateString = $().SPServices.SPConvertDateToISO(dueDate);
+
+var valuesArray = [
+  ["BookToRead", ""],
+  ["PagesRemaining", 200],
+  ["DueDate", dueDateString]
+];
+
+$().SPServices({
+	webURL: $().SPServices.SPGetCurrentSite(),
+	listName: "MyFirstList",
+	operation: "UpdateListItems",
+	batchCmd: "New",
+	valuepairs: valuesArray,
+	completefunc: function(xData, Status) {
+		console.log("New item added");
+	}
+});
+</pre>
+</code>
+
+	Once you have added some line items, you can start practicing other SPServices operations ("UpdateListItems" with batchCmd "Update", "GetListItems").
+
+		</p>
+		<h3>Exercises</h3>
+			<p class="warning">
+				<b>Warning:</b> Because we have not completed the interpretation and conversion of CAMLQuery in JavaScript for the current version of SPServicesOffline, you should call in all list data and then filter the result with JavaScript. When this bug has been updated to allow the user to filter the web service calls with standard CAMLQuery this warning will be removed, and you can import only the list items that are needed.
+			<p>
+			<p>
+			We have already established one list for you to begin. The list name is <i>ShoppingList</i>, and it has the following custom fields [<em>field type is written in square brackets</em>]:
+				<ul>
+					<li>
+						ItemName [<em>Single line of text</em>],
+					</li>
+					<li>PricePerUnit [<em>Currency - U.S. format</em>],
+					</li>
+					<li>
+						NumberOfItems [<em>Number - with # of decimals set to zero, i.e., these are integers</em>],
+					</li>
+					<li>
+						ItemType [<em>Choice with the following options:</em>
+							<ul>
+								<li>
+									Food,
+								</li>
+								<li>
+									Cookware and Utensils,
+								</li>
+								<li>
+									Office Supplies,
+								</li>
+								<li>
+									Other
+								</li>
+							</ul>
+						<em>and no default value</em>],
+					</li>
+					<li>
+						Purchased [<em>Checkbox - so returns True or False</em>],
+					</li>
+					<li>
+						PurchaseDate [<em>DateAndTime field</em>].
+					</li>
+				</ul>
+			</p>
+			<p>
+				Note that it (along with any other custom lists you make) also has these standard default fields:
+				<ul>
+					<li>
+						ID [Number],
+					</li>
+					<li>
+						Modified,
+					</li>
+					<li>
+						Editor (Modified By),
+					</li>
+					<li>
+						Created,
+					</li>
+					<li>
+						Author (Created By)
+					</li>
+				</ul>
+			</p>
+			<p>
+				<table>
+					<thead>
+						<tr>
+							<th>
+								ID
+							</th>
+							<th>
+								ItemName
+							</th>
+							<th>
+								PricePerUnit
+							</th>
+							<th>
+								NumberOfItems
+							</th>
+							<th>
+								ItemType
+							</th>
+							<th>
+								Purchased
+							</th>
+							<th>
+								LatestPurchaseDate
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>1</td><td>Milk</td><td>4.30</td><td>2</td><td>Food</td><td>True</td><td>[Generated Date, a few days before this list is initially created]</td>
+							</tr>
+							<tr>
+							<td>2</td><td>Eggs</td><td>3.56</td><td>1</td><td>Food</td><td>True</td><td>[Generated Date, a few days before this list is initially created]</td>
+							</tr>
+							<tr>
+							<td>3</td><td>Butter</td><td>4.50</td><td>1</td><td>Food</td><td>False</td><td>undefined, table just shows an empty cell</td>
+							</tr>
+							<tr>
+							<td>4</td><td>Spatula</td><td>6.00</td><td>2</td><td>Cookware and Utensils</td><td>False</td><td>undefined, table just shows an empty cell</td>
+							</tr>
+							<tr><td>5</td><td>Calculator</td><td>9.00</td><td>1</td><td>Office Supplies</td><td>False</td><td>undefined, table just shows an empty cell</td>
+							</tr>
+							<tr>
+							<td>6</td><td>Coloring Book</td><td>3.00</td><td>1</td><td>Other</td><td>False</td><td>undefined, table just shows an empty cell</td>
+						</tr>
+					</tbody>
+				</table>
+			</p>
+			<ol id="exerciseList">
+			<li>
+			<!-- GetListItems -->
+				<details>
+					<summary>
+					Do a GetListItems call, getting all of the items from the list, and printing each one's name and price (per unit) to the console. Include a $ sign on the prices.
+					</summary>
+
+					The correct output should look something like:
+					<br/>
+					<br/>
+					Milk, $4.30<br/>
+					Eggs, $3.56<br/>
+					Butter, $4.50<br/>
+					Spatula, $6.00<br/>
+					Calculator, $9.00<br/>
+					Coloring Book, $3.00<br/>
+					<br/>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+						Do a GetListItems call, getting all of the items from the list, and printing each one's name and total price (taking the number of items into account) to the console.
+					</summary>
+
+					The correct output should look something like:
+					<br/>
+					<br/>
+					Milk, $8.60<br/>
+					Eggs, $3.56<br/>
+					Butter, $4.50<br/>
+					Spatula, $12.00<br/>
+					Calculator, $9.00<br/>
+					Coloring Book, $3.00<br/>
+					<br/>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+						Write code that calls the list, gets all of the items, and writes these fields into a table:
+
+						<p>
+							<ul>
+								<li>
+									Item Name,
+								</li>
+								<li>
+									Price Per Unit,
+								</li>
+								<li>
+									Number Of Items
+								</li>
+							</ul>
+						</p>
+						<p>
+							<em>Hint: to convert the headers from UpperCamelCase to standard English, you can use the following .replace function on the strings:</em>
+								<br/>
+								<br/>
+								<code>
+									yourString.replace(/([a-z])([A-Z])/g, function(match, p1, p2) { return p1 + " " + p2; });
+								</code>
+						</p>
+					</summary>
+					
+					The correct output should look something like:
+					<br/>
+					<br/>
+					<table>
+						<thead>
+							<tr>
+								<th>
+									Item Name
+								</th>
+								<th>
+									Price Per Unit
+								</th>
+								<th>
+									Number of Items
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>
+									Milk
+								</td>
+								<td>
+									$4.30
+								</td>
+								<td>
+									2
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Eggs
+								</td>
+								<td>
+									$3.56
+								</td>
+								<td>
+									1
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Butter
+								</td>
+								<td>
+									$4.50
+								</td>
+								<td>
+									1
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Spatula
+								</td>
+								<td>
+									$6.00
+								</td>
+								<td>
+									2
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Calculator
+								</td>
+								<td>
+									$9.00
+								</td>
+								<td>
+									1
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Coloring Book
+								</td>
+								<td>
+									$3.00
+								</td>
+								<td>
+									1
+								</td>
+							</tr>
+						</tbody>
+					</table>
+					<br/>
+					<br/>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+						Write code that only gets the item whose list ite ID is 4, and print its ItemName to the console.
+					</summary>
+					The correct output should look something like:
+					<br/>
+					<br/>
+						Spatula
+					<br/>
+					<br/>	
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+						Write code that gets all items with ID greater than 3, and print their names to the console.
+					</summary>
+					The correct output should look something like:
+					<br/>
+					<br/>
+					Spatula
+					<br/>
+					Calculator
+					<br/>
+					Coloring Book
+					<br/>
+					<br/>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+					Write code that gets all items that are purchased and print them to the console.
+					</summary>
+					The correct output should look something like:
+					<br/>
+					<br/>
+					Milk
+					<br/>
+					Eggs
+					<br/>
+					<br/>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+						Write code that gets all items that are purchased and have a price per unit greater than 4, and print them to the console.
+					</summary>
+					The correct output should look something like:
+					<br/>
+					<br/>
+					Milk
+					<br/>
+					<br/>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+						Write code that gets all items that are purchased or have an ID greater than 4 and print them to the console.
+					</summary>
+					The correct output should look something like:
+					<br/>
+					<br/>
+					Milk
+					<br/>
+					<br/>
+					Eggs
+					<br/>
+					<br/>
+					Calculator
+					<br/>
+					<br/>
+					Coloring Book
+					<br/>
+					<br/>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+					Write code that involves an HTML button. Every time the button clicks, update the "NumberOfItems" field for the Coloring Book to the number of times the button has been clicked since the page loaded.
+					</summary>
+					The correct output could have many different forms. Just make sure to add some way to check if the NumberOfItems field for the Coloring Book is being updated.
+					<br/>
+					<br/>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary>
+					Draw a static HTML table based on the example list (that is, write it out in HTML instead of with JavaScript/jQuery). In the table, add a column with the header "Update". Give each row an "Update" button in this column. Write code so that
+						<ol>
+							<li>
+								The PricePerUnit can be edited in the table, and
+							</li>
+							<li>
+								When the user clicks on that row's "Update" button, it updates the price per unit of the associated item in the list to the new value. Update one of the rows and then refresh the page to make sure the new information saved to the list.
+							</li>
+						</ol>
+					</summary>
+					The correct output should look something like:
+					<br/>
+					<br/>
+					<table>
+						<thead>
+							<tr>
+								<th>
+									ID
+								</th>
+								<th>
+									ItemName
+								</th>
+								<th>
+									PricePerUnit
+								</th>
+								<th>
+									NumberOfItems
+								</th>
+								<th>
+									ItemType
+								</th>
+								<th>
+									Purchased
+								</th>
+								<th>
+									LatestPurchaseDate
+								</th>
+								<th>
+									Updated
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>1</td><td>Milk</td><td>4.30</td><td><input type="number" value="2" /></td><td>Food</td><td>True</td><td></td><td><button>Update</button></td>
+								</tr>
+								<tr>
+								<td>2</td><td>Eggs</td><td>3.56</td><td><input type="number" value="1" /></td><td>Food</td><td>True</td><td></td><td><button>Update</button></td>
+								</tr>
+								<tr>
+								<td>3</td><td>Butter</td><td>4.50</td><td><input type="number" value="1" /></td><td>Food</td><td>False</td><td></td><td><button>Update</button></td>
+								</tr>
+								<tr>
+								<td>4</td><td>Spatula</td><td>6.00</td><td><input type="number" value="2" /></td><td>Cookware and Utensils</td><td>False</td><td></td><td><button>Update</button></td>
+								</tr>
+								<tr><td>5</td><td>Calculator</td><td>9.00</td><td><input type="number" value="1" /></td><td>Office Supplies</td><td>False</td><td></td><td><button>Update</button></td>
+								</tr>
+								<tr>
+								<td>6</td><td>Coloring Book</td><td>3.00</td><td><input type="number" value="1" /></td><td>Other</td><td>False</td><td></td><td><button>Update</button></td>
+							</tr>
+						</tbody>
+					</table>
+					<br/>
+					<br/>
+				</details>
+			</li>
+		</ol>
+	</div>
+<script src="jquery.min.js"></script>
+<script src="jquery.spservices-offline.js"></script>
+<script>
+
+/*
+
+	What does the internal webstorage object look like?
+
+	"SPServicesOfflineData": {
+		webURLs: {
+			"MyWebURL1": {
+				lists: {
+					"MyListName1": {
+						listItems: [{ // Could be an array - or maybe an object with the ows_ID fields being the keys? That would prevent possible double-ups, and make it easier to access row items.
+								"ows_ID": 1,
+								"ows_Title": "",
+								"ows_Created": "07/21/2017", // Check format
+								"ows_Creator": "LongTS",
+								"ows_Modified": "07/22/2017",
+								"ows_Editor": "LongTS"
+							},
+						
+						
+						],
+						listType: 1, // This determines if it's a library or list
+						listViews: [],
+						defaultView: "Default" // If listViews.length === 0, defaultView will always be "Default". Or maybe just "" ?
+					},
+					"MyListName2": {
+					
+					}
+				},
+				libraries: {
+					"MyLibraryName1": {
+					
+					},
+					"MyLibraryName2": {
+					
+					}
+				},	
+			} // MyWebURL1
+		}, // webURLs
+		defaults: {
+			userName: "",
+			webURL: ""
+		}
+	
+	};
+
+	
+	
+	
+	
+	
+
+
+*/
+
+
+$(document).ready(function() {
+
+	$("#usernameNotice").html("Hello " + $().SPServices.SPGetCurrentUser() + "!");
+
+	$("#currentSiteNotice").html("You are current using this URL as your default site: \"" + $().SPServices.SPGetCurrentSite() + "\"");
+
+});
+
+/**
+ * The functions below are shown for reference. Rather than invoking these functions, you should get familiar with the syntax, and try to perform these operations yourself.
+ * In most situations you will create a list directly in SharePoint, rather than programmatically. Many CRUD operations will then be done using the operationgs shown below.
+ *
+ * Note that most of the syntax if very similar. You invoke the static SPServices function with a dot operator connected to ANY jQuery-wrapped object. You could use $(body),
+ * $("#myDiv"), etc., but since the DOM object is generally not used anywhere in the call, it has become convention to send in no arguments, using $(), which saves time (by
+ * not walking the DOM), but still allows SPServices to invoke any useful jQuery methods bound to the $.fn prototype.
+ *
+ * The basic syntax looks like:
+
+	$().SPServices({
+		webURL: "SomePathTo.../SomeURL", // The URL of the site where the list/library you are trying to access is located, without the final slash (so this ends with ".../SomeURL", not ".../SomeURL/" ).
+		listName: "SomeListName", // The name of the list or library you are trying to access, or the SharePoint GUID of the list,
+		
+		async: true, // Whether or not this call should be asynchronous. true by default. The only reason to use false is if you absolutely must wait until the call is done before performing any other processes.
+		
+		operation: "SomeOperation", // "GetListItems" - use this for Read operations, "UpdateListItems" - use this for Create, Update, and Delete operations
+		
+		completefunc: function(xData, Status) {
+			// You can put code in here to handle the data that is returned from the call (in the XML document xData.responseXML).
+
+			// The syntax here, for read operations, generally looks like the following. SPFilterNode is a custom jQuery operation created within SPServices.
+			// In the response XML, tags of the form <z:row> represent the line items from the list. Take time to print xData and xData.responseXML to the console
+			$(xData.responseXML).SPFilterNode("z:row").each(function(index) { // The `index` argument here is optional, and just represents which loop in the jQuery .each() statement you are in.
+				
+				// Within this loop, $(this) represents a jQuery-wrapped representation of the row item in the XML file. You can use the .attr() method to identify a specific field value for this item.
+				// Note that "ows_" is prepended to the "internal" name of custom column names when they are created, so you need to use that when referencing these fields.
+				var customColumnValueForThisItem = $(this).attr("ows_CustomColumnName");
+
+				// You can also get Default list values - note that some of them have special syntax.
+				var itemId = $(this).attr("ows_ID"); // Gets the list item ID of the row item. The ID is unique for every row item created in a list (even items that are deleted), so this is a good way to reference specific items.
+				
+				var 
+			});
+		}
+	});
+
+ *
+ */
+function exampleCreate() {
+	$().SPServices({
+		webURL: "file:///Users/You/SPServicesOfflineTest", // Choose a folder, and stick with that folder.
+		listName: "MyListName1",
+		async: true,
+		operation: "UpdateListItems",
+		batchCmd: "New",
+		valuepairs: [],
+		debug: false,
+		completefunc: function(xData, Status) {
+			var lineItem = $(xData.responseXML).SPFilterNode("z:row").first();
+			console.log( lineItem.attr("ows_ID") ); // Get the list item ID of the line item that was just created
+		}
+	});
+}
+
+function exampleRead() {
+	$().SPServices({
+		webURL: "file:///Users/You/SPServicesOfflineTest",
+		listName: "MyListName1",
+		operation: "GetListItems",
+		async: true,
+		CAMLQuery: "<Query><Where><Eq><FieldRef Name='TestColumn1' /><Value Type='Text'>Testing 123</Value></Eq></Where></Query>",
+		CAMLViewFields: "<ViewFields Properties='TRUE' />",
+		CAMLRowLimit: 0,
+		debug: false,
+		completefunc: function(xData, Status) {
+			$(xData.responseXML).SPFilterNode("z:row").each(function() {
+				console.log( $(this).attr("ows_Title") );
+			});
+		}
+	});
+}
+
+function exampleUpdate() {
+	$().SPServices({
+		webURL: "file:///Users/You/SPServicesOfflineTest",
+		listName: "MyListName1",
+		async: true,
+		operation: "UpdateListItems",
+		batchCmd: "Update",
+		ID: 1,
+		valuepairs: [["Title", "New Title"]],
+		debug: false,
+		completefunc: function(xData, Status) {
+			var lineItem = $(xData.responseXML).SPFilterNode("z:row").first();
+			console.log( lineItem.attr("ows_Title") ); // Get the new value
+		}
+	});
+}
+
+function exampleDelete() {
+	var itemId = 1;
+
+	$().SPServices({
+		webURL: "file:///Users/You/SPServicesOfflineTest",
+		listName: "MyListName1",
+		async: true,
+		batchCmd: "Delete",
+		ID: itemId,
+		debug: false,
+		completefunc: function(xData, Status) {
+			console.log("Item ID " + itemId + " deleted from list MyListName1");
+		}
+	});
+}
+
+function exampleUpdateMultiple() {
+	$().SPServices.SPUpdateMultipleListItems({
+		webURL: "file:///Users/You/SPServicesOfflineTest",
+		listName: "MyListName1",
+		async: true,
+		batchCmd: "Update",
+		CAMLQuery:  "<Query><Where><Gt><FieldRef Name='ID' /><Value Type='Number'>5</Value></Gt></Where></Query>",
+		valuepairs: [["Title", "New Title"]],
+		debug: false,
+		completefunc: function(xData, Status) {
+			$(xData.responseXML).SPFilterNode("z:row").each(function() {
+			
+			});
+		}
+	});
+}
+
+</script>
+</body>
+</html>
